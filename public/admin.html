@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Command Center · London Luxe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --sidebar-w: 240px;
+      --navy-dark: #070d1f;
+    }
+    body {
+      background: #f8fafc;
+      min-height: 100vh;
+      font-size: 13.5px; /* Global professional crisp scale */
+    }
+
+    /* Fixed Top Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--navy);
+      padding: 0.75rem 1.8rem;
+    }
+    
+    .admin-layout {
+      display: flex;
+      min-height: calc(100vh - 58px);
+      position: relative;
+    }
+
+    /* Sticky Sidebar (Remains locked in place on scroll down) */
+    .admin-sidebar {
+      width: var(--sidebar-w);
+      background: #0d1527;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      color: #fff;
+      padding: 1.2rem 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      z-index: 90;
+    }
+    .admin-sidebar::-webkit-scrollbar { width: 4px; }
+    .admin-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+    .side-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.95rem;
+      border-radius: 8px;
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+      transition: all 0.18s ease;
+    }
+    .side-nav-btn svg { width: 17px; height: 17px; stroke-width: 2; flex-shrink: 0; }
+    .side-nav-btn:hover { background: rgba(255,255,255,0.06); color: #f8fafc; }
+    .side-nav-btn.active {
+      background: var(--gold);
+      color: #0a1128;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(251, 191, 36, 0.25);
+    }
+    .side-badge {
+      margin-left: auto;
+      background: var(--crimson);
+      color: #fff;
+      font-size: 0.68rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 50px;
+    }
+
+    /* Main Content Area */
+    .admin-content {
+      flex: 1;
+      padding: 1.6rem 2.2rem;
+      max-width: 1500px;
+      overflow-x: hidden;
+      min-width: 0;
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: block; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.4rem;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.9rem;
+    }
+    .panel-title { font-size: 1.4rem; color: var(--navy); font-weight: 800; letter-spacing: -0.3px; }
+    
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.1rem;
+      margin-bottom: 1.6rem;
+    }
+    .kpi-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.1rem 1.2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .kpi-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--navy);
+      flex-shrink: 0;
+    }
+    .kpi-icon.revenue { background: #dcfce7; color: #15803d; }
+    .kpi-icon.orders { background: #e0f2fe; color: #0369a1; }
+    .kpi-icon.users { background: #fef3c7; color: #b45309; }
+    .kpi-icon.products { background: #f3e8ff; color: #7e22ce; }
+    .kpi-icon svg { width: 22px; height: 22px; stroke-width: 2.2; }
+    .kpi-info h4 { font-size: 0.72rem; text-transform: uppercase; color: var(--grey); font-weight: 700; margin-bottom: 0.15rem; letter-spacing: 0.5px; }
+    .kpi-info .val { font-size: 1.35rem; font-weight: 800; color: var(--navy); }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.2rem;
+      margin-bottom: 1.6rem;
+    }
+    .card-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.3rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      border: 1px solid #e2e8f0;
+      margin-bottom: 1.5rem;
+    }
+    .card-box h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Modern Table */
+    .data-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    table.data-table th {
+      text-align: left;
+      padding: 0.7rem 0.9rem;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-weight: 800;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    table.data-table td {
+      padding: 0.75rem 0.9rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+      color: #334155;
+    }
+    table.data-table tr:hover td { background: #f8fafc; }
+
+    /* Custom form elements */
+    .admin-form-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 1.5rem;
+    }
+    .image-preview-box {
+      width: 100%;
+      height: 160px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-top: .5rem;
+      background: #f8fafc;
+      position: relative;
+    }
+    .image-preview-box img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .field { margin-bottom: 0.9rem; }
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 0.35rem;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      padding: 0.55rem 0.8rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.84rem;
+      color: #0f172a;
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .status-select {
+      padding: .35rem .65rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: .72rem;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .status-select.pending { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+    .status-select.ongoing, .status-select.processing { background: #e0f2fe; color: #075985; border-color: #bae6fd; }
+    .status-select.shipped { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+    .status-select.delivered, .status-select.received { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .status-select.cancelled { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
+    @media (max-width: 1024px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .admin-layout { flex-direction: column; }
+      .admin-sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 0.6rem;
+      }
+      .side-nav-btn { width: auto; white-space: nowrap; padding: 0.5rem 0.8rem; }
+      .admin-form-grid { grid-template-columns: 1fr; }
+      .admin-content { padding: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Admin Nav -->
+  <header>
+    <div style="display:flex;align-items:center;gap:1.5rem">
+      <a href="/" class="logo">London Luxe</a>
+      <span style="background:rgba(251,191,36,0.15);color:var(--gold);padding:.3rem .8rem;border-radius:50px;font-size:.75rem;font-weight:800;letter-spacing:.05em">MANAGEMENT PORTAL</span>
+    </div>
+    <div class="header-actions">
+      <a href="/" target="_blank" class="btn btn-outline header-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        View Live Store
+      </a>
+      <button class="btn btn-gold header-btn" id="adminLogoutBtn">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Admin Login Screen (if not signed in) -->
+  <div id="loginRoot" style="display:none; padding: 4rem 1rem;">
+    <div class="card-box" style="max-width:440px; margin: 0 auto; box-shadow: var(--shadow-lg);">
+      <h3 style="font-size:1.4rem">Admin Sign In</h3>
+      <p style="color:var(--grey);font-size:.9rem;margin-bottom:1.5rem">Access orders, products, client feedback &amp; reports.</p>
+      <div class="form-msg" id="loginMsg"></div>
+      <form id="adminLoginForm">
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="adminEmail" value="admin@londonluxe.test" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="adminPassword" value="admin123" required>
+        </div>
+        <button class="btn btn-gold" type="submit" style="width:100%;margin-top:.8rem">Enter Command Center</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Authenticated Admin Layout -->
+  <div class="admin-layout" id="adminRoot" style="display:none;">
+    
+    <!-- Sidebar Menu -->
+    <aside class="admin-sidebar">
+      <button class="side-nav-btn active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard &amp; Reports
+      </button>
+      <button class="side-nav-btn" data-view="products">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        Products CRUD
+      </button>
+      <button class="side-nav-btn" data-view="orders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Orders Management
+        <span class="side-badge" id="orderBadge" style="display:none">0</span>
+      </button>
+      <button class="side-nav-btn" data-view="users">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Users &amp; Clients
+      </button>
+      <button class="side-nav-btn" data-view="messages">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Feedback &amp; Messages
+        <span class="side-badge" id="msgBadge" style="display:none">0</span>
+      </button>
+      <button class="side-nav-btn" data-view="banners">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Banners &amp; Campaigns
+      </button>
+      <button class="side-nav-btn" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Personal &amp; Website Settings
+      </button>
+      <button class="side-nav-btn" data-view="reviews">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/><circle cx="18" cy="18" r="4" fill="none"/><path d="M18 16v2l1 1"/></svg>
+        Customer Reviews
+      </button>
+      <button class="side-nav-btn" data-view="coupons">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="13" y1="5" x2="11" y2="19"/></svg>
+        Discount Coupons
+      </button>
+    </aside>
+
+    <!-- Main Dynamic Content Views -->
+    <main class="admin-content">
+
+      <!-- ================= VIEW 1: DASHBOARD & REPORTS ================= -->
+      <section class="view-panel active" id="view-dashboard">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Reports &amp; Statistics</h2>
+            <p style="color:var(--grey)">Live metrics, revenue tracking and customer trends</p>
+          </div>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-outline btn-sm" id="btnReportDaily" style="color:var(--navy);border-color:var(--navy)">Daily</button>
+            <button class="btn btn-outline btn-sm" id="btnReportWeekly" style="color:var(--navy);border-color:var(--navy)">Weekly</button>
+            <button class="btn btn-gold btn-sm" id="btnReportMonthly">Monthly</button>
+          </div>
+        </div>
+
+        <!-- KPI Metrics -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon revenue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+            <div class="kpi-info"><h4>Total Revenue</h4><div class="val" id="kpiRevenue">£0.00</div></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
+            <div class="kpi-info"><h4>Orders Placed</h4><div class="val" id="kpiOrders">0</div></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+            <div class="kpi-info"><h4>Customers</h4><div class="val" id="kpiUsers">0</div></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon products"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+            <div class="kpi-info"><h4>Active Products</h4><div class="val" id="kpiProducts">0</div></div>
+          </div>
+        </div>
+
+        <!-- Charts: Revenue Trend & Status Distribution -->
+        <div class="chart-grid">
+          <div class="card-box">
+            <h3 id="chartHeading">Sales &amp; Revenue Overview</h3>
+            <div style="height: 300px; position: relative;">
+              <canvas id="salesChart"></canvas>
+            </div>
+          </div>
+          <div class="card-box">
+            <h3>Order Status Breakdown</h3>
+            <div style="height: 300px; position: relative;">
+              <canvas id="statusChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Selling & Trending Products Table -->
+        <div class="admin-form-grid">
+          <div class="card-box">
+            <h3>🔥 Top Selling Products</h3>
+            <div class="data-table-wrap">
+              <table class="data-table" id="topProductsTable">
+                <thead><tr><th>Product</th><th>Units Sold</th><th>Total Generated</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-box">
+            <h3>👁️ Most Viewed / Popular Trends</h3>
+            <div class="data-table-wrap">
+              <table class="data-table" id="mostViewedTable">
+                <thead><tr><th>Product</th><th>Views</th><th>Stock</th><th>Price</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 2: PRODUCTS CRUD WITH UPLOAD & BANNER LINK ================= -->
+      <section class="view-panel" id="view-products">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Product Inventory &amp; Creation</h2>
+            <p style="color:var(--grey)">Add new designs with picture upload, stock, pricing, and campaign banner linkage</p>
+          </div>
+        </div>
+
+        <div class="admin-form-grid">
+          <!-- Form Card -->
+          <div class="card-box">
+            <h3 id="formTitle">Add New Product</h3>
+            <div class="form-msg" id="productMsg"></div>
+            <form id="productForm">
+              <input type="hidden" id="pId">
+              <input type="hidden" id="pImage">
+
+              <div class="field">
+                <label>Product Name</label>
+                <input type="text" id="pName" placeholder="e.g. Royal Black Friday Clutch" required>
+              </div>
+
+              <!-- Campaign / Banner Link Option -->
+              <div class="field" style="background:#fefce8;border:1.5px solid #fde047;padding:.9rem;border-radius:12px">
+                <label style="color:#854d0e">Link to Promotional Banner Campaign (Optional)</label>
+                <p style="font-size:.78rem;color:#713f12;margin-bottom:.4rem">
+                  Select a banner (e.g. "Black Friday"). Customers clicking that banner will see this piece first! If you disable the banner, this item automatically hides from store grids.
+                </p>
+                <select id="pBannerSelect"></select>
+              </div>
+
+              <!-- Product Image Upload -->
+              <div class="field">
+                <label>Product Picture (Upload File or Enter URL)</label>
+                <div style="display:flex;gap:.5rem;align-items:center">
+                  <input type="file" id="pImageFile" accept="image/*" style="padding:.5rem">
+                  <button type="button" class="btn btn-outline btn-sm" id="btnUploadImage" style="color:var(--navy);border-color:var(--navy);white-space:nowrap">Upload Image</button>
+                </div>
+                <input type="text" id="pImageUrl" placeholder="Or paste direct image URL (/uploads/... or https://...)" style="margin-top:.4rem">
+                <div class="image-preview-box" id="imagePreviewBox">
+                  <span style="color:var(--grey);font-size:.85rem">No image selected</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Description</label>
+                <textarea id="pDesc" rows="3" placeholder="Handcrafted with genuine leather and gold hardware..."></textarea>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+                <div class="field">
+                  <label>Price (£)</label>
+                  <input type="number" step="0.01" min="0" id="pPrice" placeholder="199.00" required>
+                </div>
+                <div class="field">
+                  <label>Old / Original Price (£)</label>
+                  <input type="number" step="0.01" min="0" id="pOldPrice" placeholder="Optional discount">
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+                <div class="field">
+                  <label>Stock Quantity</label>
+                  <input type="number" min="0" id="pStock" value="15" required>
+                </div>
+                <div class="field">
+                  <label>Category</label>
+                  <select id="pCategory" required></select>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+                <div class="field">
+                  <label>Badge (Optional)</label>
+                  <input type="text" id="pBadge" placeholder="NEW, SALE, BLACK FRIDAY">
+                </div>
+                <div class="field">
+                  <label>Theme Swatch Color</label>
+                  <input type="color" id="pColor" value="#228B22" style="height:46px;padding:.2rem">
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Features (One bullet per line)</label>
+                <textarea id="pFeatures" rows="3" placeholder="Genuine Italian Leather&#10;Adjustable Gold Strap&#10;Interior Suede Lining"></textarea>
+              </div>
+
+              <div class="field" style="display:flex;align-items:center;gap:.6rem">
+                <input type="checkbox" id="pFeatured" style="width:auto">
+                <label for="pFeatured" style="margin:0;cursor:pointer">Feature prominently on store front</label>
+              </div>
+
+              <div style="display:flex;gap:.8rem;margin-top:1.2rem">
+                <button type="submit" class="btn btn-gold" style="flex:1" id="saveProductBtn">Save Product to Store</button>
+                <button type="button" class="btn btn-outline" id="resetProductBtn" style="color:var(--grey);border-color:var(--light-grey)">Reset</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Live Table Card -->
+          <div class="card-box">
+            <h3>Current Catalog Inventory</h3>
+            <div class="data-table-wrap">
+              <table class="data-table" id="productAdminTable">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Campaign Banner</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 3: ORDERS MANAGEMENT & STATUS ================= -->
+      <section class="view-panel" id="view-orders">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Customer Orders &amp; Fulfillment</h2>
+            <p style="color:var(--grey)">Track order shipments, client addresses, and update status</p>
+          </div>
+          <div>
+            <select id="orderStatusFilter" class="filter-select">
+              <option value="all">All Orders</option>
+              <option value="pending">Pending</option>
+              <option value="ongoing">On-Going / Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="delivered">Delivered / Received</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div class="data-table-wrap">
+            <table class="data-table" id="adminOrderTable">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Customer Info</th>
+                  <th>Shipping Destination</th>
+                  <th>Ordered Items</th>
+                  <th>Total</th>
+                  <th>Current Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 4: USERS & CLIENTS ================= -->
+      <section class="view-panel" id="view-users">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Registered Accounts &amp; Users</h2>
+            <p style="color:var(--grey)">Client database, order history volume and security roles</p>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div class="data-table-wrap">
+            <table class="data-table" id="adminUsersTable">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Total Orders</th>
+                  <th>Total Spent</th>
+                  <th>Role</th>
+                  <th>Registered</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 5: FEEDBACK & MESSAGES ================= -->
+      <section class="view-panel" id="view-messages">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Customer Feedback &amp; Concierge Messages</h2>
+            <p style="color:var(--grey)">Inquiries submitted from the store contact form</p>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div class="data-table-wrap">
+            <table class="data-table" id="adminMessagesTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Client</th>
+                  <th>Subject</th>
+                  <th>Message / Feedback</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 6: PROMOTIONAL BANNERS & CAMPAIGNS ================= -->
+      <section class="view-panel" id="view-banners">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Homepage Announcement Banners &amp; Campaigns</h2>
+            <p style="color:var(--grey)">Manage top swiping banners (every 5s) and linked product campaigns</p>
+          </div>
+        </div>
+
+        <div class="admin-form-grid">
+          <div class="card-box">
+            <h3 id="bannerFormTitle">Create New Campaign Banner</h3>
+            <div class="form-msg" id="bannerMsg"></div>
+            <form id="bannerForm">
+              <input type="hidden" id="bId">
+              <input type="hidden" id="bImage">
+              <div class="field">
+                <label>Campaign Headline Title</label>
+                <input type="text" id="bTitle" placeholder="e.g. Black Friday Exclusive 🖤" required>
+              </div>
+              <div class="field">
+                <label>Subtitle / Details</label>
+                <textarea id="bSubtitle" rows="2" placeholder="Enjoy up to 40% off on all midnight edition pieces."></textarea>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+                <div class="field">
+                  <label>Button Text</label>
+                  <input type="text" id="bBtnText" value="Shop Collection">
+                </div>
+                <div class="field">
+                  <label>Button Link</label>
+                  <input type="text" id="bBtnLink" value="#collections">
+                </div>
+              </div>
+              <div class="field">
+                <label>Banner Background Style</label>
+                <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+                  <button type="button" class="btn btn-outline btn-sm" id="btnBannerBgColorMode">Use Gradient/Color</button>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnBannerBgImageMode">Use Full Background Picture</button>
+                </div>
+                <!-- Option A: Gradient/Color -->
+                <div id="bannerBgColorField">
+                  <label style="font-size:.75rem;color:var(--grey)">CSS Gradient / Solid Color</label>
+                  <input type="text" id="bBgColor" value="linear-gradient(135deg, #09090b 0%, #18181b 50%, #b45309 100%)">
+                </div>
+                <!-- Option B: Uploaded Full Picture -->
+                <div id="bannerBgImageField" style="margin-top:.4rem">
+                  <label style="font-size:.75rem;color:var(--grey)">Full Banner Background Image (File or URL)</label>
+                  <div style="display:flex;gap:.5rem;align-items:center">
+                    <input type="file" id="bImageFile" accept="image/*" style="padding:.5rem">
+                    <button type="button" class="btn btn-outline btn-sm" id="btnUploadBannerImg" style="color:var(--navy);border-color:var(--navy);white-space:nowrap">Upload Image</button>
+                  </div>
+                  <input type="text" id="bImageUrl" placeholder="Or paste background image URL (/uploads/... or https://...)" style="margin-top:.3rem">
+                  <div class="image-preview-box" id="bannerImgPreviewBox" style="height:120px;margin-top:.4rem">
+                    <span style="color:var(--grey);font-size:.8rem">No image uploaded (using color background)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="field" style="display:flex;align-items:center;gap:.6rem">
+                <input type="checkbox" id="bActive" checked style="width:auto">
+                <label for="bActive" style="margin:0;cursor:pointer">Banner is active in 5-sec auto-slider (Enabling also unhides linked products)</label>
+              </div>
+              <div style="display:flex;gap:.8rem">
+                <button type="submit" class="btn btn-gold" style="flex:1" id="saveBannerBtn">Save Campaign Banner</button>
+                <button type="button" class="btn btn-outline" id="resetBannerBtn">Reset</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card-box">
+            <h3>Active &amp; Archived Banners</h3>
+            <div class="data-table-wrap">
+              <table class="data-table" id="adminBannersTable">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Linked Products</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 7: PERSONAL & WEBSITE SETTINGS ================= -->
+      <section class="view-panel" id="view-settings">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Personal Profile &amp; Website Branding</h2>
+            <p style="color:var(--grey)">Change store name everywhere with 1-click, update admin name &amp; password</p>
+          </div>
+        </div>
+
+        <div class="admin-form-grid">
+          <!-- Website Global Brand Settings -->
+          <div class="card-box">
+            <h3>🌐 Global Website Name &amp; Contact</h3>
+            <div class="form-msg" id="siteSettingsMsg"></div>
+            <form id="siteSettingsForm">
+              <div class="field">
+                <label>Store / Website Name</label>
+                <input type="text" id="settingSiteName" placeholder="e.g. London Luxe or My Boutique" required>
+                <small style="color:var(--grey);font-size:.75rem">Changing this updates the store name on all headers, footers, page titles, and receipts automatically!</small>
+              </div>
+              <div class="field">
+                <label>Brand Tagline / Slogan</label>
+                <input type="text" id="settingSiteTagline" placeholder="e.g. Luxury Handbags & Fine Jewelry">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+                <div class="field">
+                  <label>Instagram Handle</label>
+                  <input type="text" id="settingInstagram" placeholder="your_brand_handle">
+                </div>
+                <div class="field">
+                  <label>WhatsApp Number</label>
+                  <input type="text" id="settingWhatsapp" placeholder="+44 or 92300...">
+                </div>
+              </div>
+              <div class="field">
+                <label>Concierge Email</label>
+                <input type="email" id="settingEmail" placeholder="support@brand.com">
+              </div>
+              <button type="submit" class="btn btn-gold" style="width:100%;margin-top:.5rem">Update Website Name Everywhere</button>
+            </form>
+          </div>
+
+          <!-- Admin Personal Profile & Password Change -->
+          <div class="card-box">
+            <h3>🔐 Admin Personal Account &amp; Password</h3>
+            <div class="form-msg" id="adminProfileMsg"></div>
+            <form id="adminProfileForm">
+              <div class="field">
+                <label>Admin Display Name</label>
+                <input type="text" id="profileName" required>
+              </div>
+              <div class="field">
+                <label>Admin Login Email</label>
+                <input type="email" id="profileEmail" required>
+              </div>
+              <hr style="border:none;border-top:1px solid var(--light-grey);margin:1.2rem 0">
+              <h4 style="color:var(--navy);font-size:.9rem;margin-bottom:.8rem">Change Password (Optional)</h4>
+              <div class="field">
+                <label>Current Password</label>
+                <input type="password" id="profileCurrentPassword" placeholder="Enter current password to set new one">
+              </div>
+              <div class="field">
+                <label>New Password</label>
+                <input type="password" id="profileNewPassword" placeholder="At least 6 characters">
+              </div>
+              <button type="submit" class="btn btn-navy" style="width:100%;margin-top:.5rem">Save Profile &amp; Password</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 8: CUSTOMER REVIEWS (Social Proof) ================= -->
+      <section class="view-panel" id="view-reviews">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">⭐ Customer Reviews &amp; Social Proof</h2>
+            <p style="color:var(--grey)">Upload customer chat screenshots, order confirmations, or review photos. These display on the store to build trust.</p>
+          </div>
+        </div>
+
+        <!-- Upload New Review Form -->
+        <div class="card-box" style="margin-bottom:2rem">
+          <h3>📸 Upload New Review / Photo</h3>
+          <div class="form-msg" id="reviewFormMsg"></div>
+          <form id="reviewUploadForm" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="field" style="grid-column:1/-1">
+              <label>Review Photo / Screenshot</label>
+              <input type="file" id="reviewImageFile" accept="image/*" required style="padding:.5rem;border:1px solid #e2e8f0;border-radius:8px;width:100%">
+            </div>
+            <div class="field">
+              <label>Caption / Description <small style="color:var(--grey)">(optional)</small></label>
+              <input type="text" id="reviewCaption" placeholder="e.g. 'Received in perfect condition! 💛'">
+            </div>
+            <div class="field">
+              <label>Display Order <small style="color:var(--grey)">(lower = shown first)</small></label>
+              <input type="number" id="reviewOrder" value="0" min="0" style="width:100%">
+            </div>
+            <div class="field" style="display:flex;align-items:center;gap:.7rem;padding-top:1.4rem">
+              <label class="toggle-label" style="display:flex;align-items:center;gap:.7rem;cursor:pointer">
+                <input type="checkbox" id="reviewActive" checked style="width:auto">
+                <span>Visible on store (Active)</span>
+              </label>
+            </div>
+            <div style="grid-column:1/-1">
+              <button type="submit" class="btn btn-gold" style="width:100%">Upload &amp; Publish Review</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Existing Reviews Grid -->
+        <div class="card-box">
+          <h3>All Customer Reviews</h3>
+          <div id="adminReviewsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.2rem;margin-top:1rem;">
+            <p style="color:var(--grey);grid-column:1/-1">Loading reviews…</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 9: DISCOUNT COUPONS ================= -->
+      <section class="view-panel" id="view-coupons">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">🎟️ Discount &amp; Promo Coupons</h2>
+            <p style="color:var(--grey)">Create promotional coupon codes for seasonal sales, VIP clients, and marketing campaigns.</p>
+          </div>
+        </div>
+
+        <!-- Create Coupon Form -->
+        <div class="card-box" style="margin-bottom:2rem">
+          <h3>Create New Coupon</h3>
+          <div class="form-msg" id="couponFormMsg"></div>
+          <form id="couponCreateForm" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="field">
+              <label>Coupon Code (e.g. LUXE20, WINTER50)</label>
+              <input type="text" id="couponCodeInput" placeholder="PROMOCODE" required style="text-transform:uppercase;">
+            </div>
+            <div class="field">
+              <label>Discount Type</label>
+              <select id="couponTypeSelect" style="width:100%;padding:.6rem;border-radius:8px;border:1px solid #e2e8f0;">
+                <option value="percentage">Percentage (%) Off</option>
+                <option value="fixed">Fixed Amount (£) Off</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Discount Value (% or £ amount)</label>
+              <input type="number" id="couponValueInput" placeholder="e.g. 15 or 50" min="1" step="any" required>
+            </div>
+            <div class="field">
+              <label>Minimum Order Amount (£) <small style="color:var(--grey)">(optional)</small></label>
+              <input type="number" id="couponMinOrderInput" placeholder="0" min="0" value="0">
+            </div>
+            <div style="grid-column:1/-1">
+              <button type="submit" class="btn btn-gold" style="width:100%">Create &amp; Activate Coupon</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Coupons Table -->
+        <div class="card-box">
+          <h3>Active Promotional Coupons</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Discount</th>
+                  <th>Min Order</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="couponsTableBody">
+                <tr><td colspan="6" style="text-align:center;color:var(--grey)">Loading coupons…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
